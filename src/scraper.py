@@ -1,21 +1,22 @@
-import requests
 import time
+
+import requests
 from bs4 import BeautifulSoup
 
+from src.config import MLB_RULEBOOK_URL, MLB_SCHEMA, SCRAPER_TIMEOUT
 from src.schema import RuleChunk
-from config import mlb_rulebook_url, scraper_timeout, mlb_schema
 
 
-def scraper():
+def scraper() -> list[RuleChunk]:
     rule_chunks = []
-    response = requests.get(url=mlb_rulebook_url, timeout=scraper_timeout)
+    response = requests.get(url=MLB_RULEBOOK_URL, timeout=SCRAPER_TIMEOUT)
     landing_page = BeautifulSoup(response.text, "html.parser")
 
     sections = landing_page.select(".p-related-links__list a")
     for section in sections:
         rc = RuleChunk(
             rule_name=section.text,  # could be in the next loop
-            url=mlb_schema + section["href"],
+            url=MLB_SCHEMA + section["href"],
             content="",
             subsection=None,
         )
@@ -24,7 +25,7 @@ def scraper():
     rule_chunks_final = []
     for rule_chunk in rule_chunks:
         time.sleep(2)
-        response = requests.get(url=rule_chunk.url, timeout=scraper_timeout)
+        response = requests.get(url=rule_chunk.url, timeout=SCRAPER_TIMEOUT)
         soup = BeautifulSoup(response.text, "html.parser")
 
         h3_tags = soup.find_all("h3")
@@ -48,16 +49,16 @@ def scraper():
                             content=current_text,
                             subsection=heading_text,
                         )
-                        print("ok")
                         rule_chunks_final.append(rc)
                 current_element = current_element.next_sibling
 
-    # print(f"Total chunks: {len(rule_chunks_final)}")
-    # print(f"Empty content: {sum(1 for c in rule_chunks_final if not c.content)}")
+    print(f"Total chunks: {len(rule_chunks_final)}")
+    print(f"Empty content: {sum(1 for c in rule_chunks_final if not c.content)}")
     # print(f"No subsection: {sum(1 for c in rule_chunks_final if c.subsection is None)}")
     # print(
     #     f"With subsection: {sum(1 for c in rule_chunks_final if c.subsection is not None)}"
     # )
+    return rule_chunks_final
 
 
 if __name__ == "__main__":
